@@ -1,12 +1,12 @@
 {
-  "name": "水果大合并",
-  "short_name": "水果合并",
+  "name": "Fruit Merge HD",
+  "short_name": "Fruit HD",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#1a2a32",
-  "theme_color": "#1a2a32",
+  "background_color": "#5a351b",
+  "theme_color": "#5a351b",
   "icons": [
     {
       "src": "./icon-192.png",

@@ -1,11 +1,9 @@
-上传 GitHub Pages 方法：
-1. 新建 GitHub repository，例如 fruit-merge-fixed，选择 Public。
-2. 把本文件夹里的 index.html、manifest.json、sw.js、icon-192.png、icon-512.png 全部上传到仓库根目录。
-3. Settings → Pages → Source 选 Deploy from a branch。
-4. Branch 选 main，Folder 选 /root，Save。
-5. 等 1-3 分钟，用 iPhone Safari 打开 GitHub Pages 网址。
-6. Safari 底部分享按钮 → 添加到主屏幕。
+Fruit Merge HD 上传方法：
+1. 解压本 zip。
+2. GitHub 新建 Public repository。
+3. 上传 index.html、manifest.json、sw.js、icon-192.png、icon-512.png 到仓库根目录。
+4. Settings → Pages → Deploy from a branch → main / root → Save。
+5. 等页面生成后，用 iPhone Safari 打开网址。
+6. 分享 → 添加到主屏幕。
 
-重要：
-不能把 html 文件直接通过微信/短信/AirDrop 分享到 iPhone 后打开，这样不是 HTTPS 网站，PWA/缓存/添加主屏幕都可能不能正常工作。
-必须上传到 GitHub Pages、Netlify、Vercel 这类 HTTPS 网站后再用 Safari 打开。
+注意：不要直接把 html 文件发到 iPhone 打开。必须是 HTTPS 网址，Safari 才能正常添加主屏幕和缓存运行。
