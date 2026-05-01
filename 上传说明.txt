@@ -1,9 +1,2 @@
-Fruit Merge HD 上传方法：
-1. 解压本 zip。
-2. GitHub 新建 Public repository。
-3. 上传 index.html、manifest.json、sw.js、icon-192.png、icon-512.png 到仓库根目录。
-4. Settings → Pages → Deploy from a branch → main / root → Save。
-5. 等页面生成后，用 iPhone Safari 打开网址。
-6. 分享 → 添加到主屏幕。
-
-注意：不要直接把 html 文件发到 iPhone 打开。必须是 HTTPS 网址，Safari 才能正常添加主屏幕和缓存运行。
+上传 GitHub Pages：把本文件夹所有文件和 assets 文件夹一起上传到仓库根目录。等 Pages 部署后，用 iPhone Safari 打开网址，分享 → 添加到主屏幕。
+如果还是旧版，在网址后加 ?v=3dpro
