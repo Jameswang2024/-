@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="水果合并" />
+  <meta name="theme-color" content="#1a2a32" />
+  <link rel="manifest" href="./manifest.json" />
+  <link rel="apple-touch-icon" href="./icon-192.png" />
+  <title>水果大合并 · 修复版</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;user-select:none;-webkit-tap-highlight-color:transparent}
+    html,body{height:100%;overflow:hidden}
+    body{background:#1a2a32;display:flex;justify-content:center;align-items:center;font-family:system-ui,-apple-system,"Segoe UI",Helvetica,sans-serif;touch-action:none}
+    .wrap{width:min(100vw,500px);padding:env(safe-area-inset-top) 10px env(safe-area-inset-bottom)}
+    .game-container{position:relative;background:#2c1e12;border-radius:34px;padding:10px;box-shadow:0 25px 35px -15px rgba(0,0,0,.55),inset 0 1px 4px rgba(255,255,200,.3)}
+    .game-header{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 8px 6px;color:#fff3e0;text-shadow:0 2px 3px #6b3e1c}
+    .score-box,.next-fruit{background:rgba(0,0,0,.48);border-radius:50px;box-shadow:inset 0 1px 3px rgba(255,255,200,.3);backdrop-filter:blur(4px)}
+    .score-box{padding:6px 14px;font-weight:800;font-size:1.25rem;min-width:88px;text-align:center}
+    .score-label,.next-label{font-size:.68rem;letter-spacing:1px;opacity:.85}
+    .next-fruit{padding:5px 12px;display:flex;align-items:center;gap:8px;font-weight:700}
+    .next-icon{width:34px;height:34px;background-size:contain;background-repeat:no-repeat;background-position:center;filter:drop-shadow(0 2px 4px rgba(0,0,0,.35))}
+    button{border:none;cursor:pointer;font-weight:900}
+    .reset-btn{background:#e07c3c;color:white;padding:8px 14px;border-radius:40px;font-size:.82rem;box-shadow:0 4px 0 #91461a;white-space:nowrap}
+    canvas{display:block;width:100%;height:auto;aspect-ratio:450/750;border-radius:26px;box-shadow:inset 0 0 0 3px #f9e0a0,0 10px 25px rgba(0,0,0,.3);background:#fdf8ed;touch-action:none}
+    .instruction{text-align:center;font-size:.72rem;padding:8px 8px 2px;color:#ecd9b4;line-height:1.35}
+    .gameover-panel{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:none;flex-direction:column;align-items:center;background:rgba(0,0,0,.86);backdrop-filter:blur(16px);border-radius:36px;padding:26px 30px;text-align:center;color:#ffecb3;border:1px solid rgba(255,215,0,.55);z-index:20;width:80%;max-width:280px;font-weight:800}
+    .gameover-panel h2{font-size:2rem;margin-bottom:10px}
+    .gameover-panel button{background:#f5a623;margin-top:18px;padding:11px 26px;border-radius:40px;font-size:1.1rem;color:#2c1a0c}
+    @media(max-width:420px){.reset-btn{padding:7px 10px;font-size:.76rem}.score-box{font-size:1.1rem;min-width:76px}.next-label{display:none}}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="game-container">
+    <div class="game-header">
+      <div class="score-box"><div class="score-label">🍉 分数</div><span id="scoreValue">0</span></div>
+      <div class="next-fruit"><span class="next-label">下一个</span><div id="nextFruitIcon" class="next-icon"></div></div>
+      <button class="reset-btn" id="resetGameBtn">🎲 新的一局</button>
+    </div>
+    <canvas id="gameCanvas" width="450" height="750"></canvas>
+    <div class="instruction">左右拖动选择位置，松开掉落。同种水果碰撞会合成。红线以上停留太久才会结束。</div>
+    <div id="gameoverOverlay" class="gameover-panel">
+      <h2>🍬 GAME OVER</h2>
+      <p>水果堆太高啦～</p>
+      <button id="restartOverlayBtn">再来一盘 🍈</button>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+  const FRUIT_TIERS=[
+    {name:"樱桃",color1:"#E33B3B",color2:"#B31E1E",emoji:"🍒",radius:18,score:2},
+    {name:"蓝莓",color1:"#5C4B99",color2:"#3A2C6E",emoji:"🫐",radius:20,score:5},
+    {name:"柑橘",color1:"#FFA559",color2:"#E57C23",emoji:"🍊",radius:24,score:8},
+    {name:"红苹果",color1:"#E6433B",color2:"#B82C1F",emoji:"🍎",radius:28,score:12},
+    {name:"蜜瓜",color1:"#9FD36E",color2:"#6F9E3D",emoji:"🍈",radius:33,score:18},
+    {name:"凤梨",color1:"#F0B429",color2:"#C27E1A",emoji:"🍍",radius:38,score:25},
+    {name:"大西瓜",color1:"#588C3E",color2:"#32641F",emoji:"🍉",radius:44,score:35},
+    {name:"椰子",color1:"#B87C4F",color2:"#8D5735",emoji:"🥥",radius:50,score:50},
+    {name:"黄金瓜",color1:"#FFD966",color2:"#E6B422",emoji:"🏆",radius:58,score:90}
+  ];
+  const canvas=document.getElementById("gameCanvas"),ctx=canvas.getContext("2d");
+  const scoreValue=document.getElementById("scoreValue"),overlay=document.getElementById("gameoverOverlay");
+  const width=450,height=750,leftWallX=38,rightWallX=width-38,groundY=height-42,gameOverLineY=95;
+  const GRAVITY=.38,GROUND_BOUNCE=.42,WALL_BOUNCE=.55,AIR=.997,ANGULAR_FRICTION=.985;
+  let fruits=[],activeFruit=null,nextFruitType=0,currentScore=0,gameOver=false,pointerX=width/2,dropCounter=0,lastDropAt=0,now=0;
+  function updateScoreUI(){scoreValue.textContent=currentScore}
+  function getRandomFruitType(){dropCounter++;if(dropCounter<=8)return Math.floor(Math.random()*3);const maxTier=Math.min(5,2+Math.floor(currentScore/220));return Math.random()<.72?Math.floor(Math.random()*3):Math.floor(Math.random()*(maxTier+1))}
+  function drawFruitOnCanvas(c,x,y,fruit,rad){const g=c.createRadialGradient(x-rad*.25,y-rad*.28,rad*.15,x,y,rad);g.addColorStop(0,fruit.color1);g.addColorStop(1,fruit.color2);c.beginPath();c.arc(x,y,rad,0,Math.PI*2);c.fillStyle=g;c.fill();c.beginPath();c.arc(x-rad*.2,y-rad*.24,rad*.18,0,Math.PI*2);c.fillStyle="rgba(255,255,220,.62)";c.fill();c.font=`${rad*1.08}px "Apple Color Emoji","Segoe UI Emoji",sans-serif`;c.textAlign="center";c.textBaseline="middle";c.fillText(fruit.emoji,x+1,y+2)}
+  function updateNextFruitIcon(){const icon=document.getElementById("nextFruitIcon"),fruit=FRUIT_TIERS[nextFruitType],ic=document.createElement("canvas");ic.width=80;ic.height=80;drawFruitOnCanvas(ic.getContext("2d"),40,40,fruit,fruit.radius*.72);icon.style.backgroundImage=`url(${ic.toDataURL("image/png")})`}
+  function spawnActiveFruit(){if(gameOver)return;const typeIdx=nextFruitType,data=FRUIT_TIERS[typeIdx];nextFruitType=getRandomFruitType();updateNextFruitIcon();activeFruit={type:typeIdx,x:Math.min(Math.max(pointerX,leftWallX+data.radius),rightWallX-data.radius),y:58,vx:0,vy:0,radius:data.radius,angular:0,angularVel:0,isStatic:true,merging:false,bornAt:now,droppedAt:null,overLineSince:null}}
+  function drawScene(){ctx.clearRect(0,0,width,height);ctx.fillStyle="#FDF2DF";ctx.fillRect(0,0,width,height);ctx.strokeStyle="#C9844C";ctx.lineWidth=6;ctx.strokeRect(18,18,width-36,height-36);ctx.fillStyle="#D9AE6E";ctx.fillRect(20,20,width-40,height-40);ctx.fillStyle="#FBEBCB";ctx.fillRect(24,24,width-48,height-48);ctx.beginPath();ctx.moveTo(leftWallX-5,gameOverLineY);ctx.lineTo(rightWallX+5,gameOverLineY);ctx.strokeStyle="#ff5e6e";ctx.lineWidth=3;ctx.setLineDash([8,8]);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle="#B95C2A";ctx.font="bold 12px system-ui";ctx.fillText("⚠️ 安全线",width-82,gameOverLineY-5);for(const f of fruits){if(f.merging)continue;ctx.save();ctx.translate(f.x,f.y);ctx.rotate(f.angular);drawFruitOnCanvas(ctx,0,0,FRUIT_TIERS[f.type],f.radius);ctx.restore()}if(activeFruit&&!gameOver){ctx.setLineDash([6,8]);ctx.strokeStyle="rgba(120,80,40,.35)";ctx.beginPath();ctx.moveTo(activeFruit.x,25);ctx.lineTo(activeFruit.x,120);ctx.stroke();ctx.setLineDash([]);ctx.save();ctx.shadowBlur=12;ctx.shadowColor="rgba(0,0,0,.3)";ctx.translate(activeFruit.x,activeFruit.y);drawFruitOnCanvas(ctx,0,0,FRUIT_TIERS[activeFruit.type],activeFruit.radius);ctx.restore()}}
+  function resolvePhysics(){for(const f of fruits){if(f.merging)continue;f.vy+=GRAVITY;f.vx*=AIR;f.vy*=.999;f.x+=f.vx;f.y+=f.vy;f.angularVel*=ANGULAR_FRICTION;f.angular+=f.angularVel;if(f.x-f.radius<=leftWallX){f.x=leftWallX+f.radius;f.vx=Math.abs(f.vx)*WALL_BOUNCE}if(f.x+f.radius>=rightWallX){f.x=rightWallX-f.radius;f.vx=-Math.abs(f.vx)*WALL_BOUNCE}if(f.y+f.radius>=groundY){f.y=groundY-f.radius;f.vy=-Math.abs(f.vy)*GROUND_BOUNCE;if(Math.abs(f.vy)<.8)f.vy=0;f.vx*=.96}if(f.y-f.radius<20){f.y=20+f.radius;if(f.vy<0)f.vy=0}}for(let pass=0;pass<3;pass++){outer:for(let i=0;i<fruits.length;i++){for(let j=i+1;j<fruits.length;j++){const a=fruits[i],b=fruits[j];if(!a||!b||a.merging||b.merging)continue;const dx=b.x-a.x,dy=b.y-a.y,dist=Math.hypot(dx,dy)||.01,minDist=a.radius+b.radius;if(dist<minDist){if(a.type===b.type&&a.type<FRUIT_TIERS.length-1&&now-a.bornAt>120&&now-b.bornAt>120){const newType=a.type+1,newFruit={type:newType,x:(a.x+b.x)/2,y:(a.y+b.y)/2-2,vx:(a.vx+b.vx)*.35,vy:-1.2,radius:FRUIT_TIERS[newType].radius,angular:0,angularVel:0,merging:false,bornAt:now,droppedAt:now,overLineSince:null};currentScore+=FRUIT_TIERS[newType].score;updateScoreUI();fruits.splice(j,1);fruits.splice(i,1);fruits.push(newFruit);break outer}const nx=dx/dist,ny=dy/dist,overlap=(minDist-dist)/2+.05;a.x-=nx*overlap;b.x+=nx*overlap;a.y-=ny*overlap;b.y+=ny*overlap;const rvx=b.vx-a.vx,rvy=b.vy-a.vy,vel=rvx*nx+rvy*ny;if(vel<0){const imp=-(1+.45)*vel/2;a.vx-=imp*nx;b.vx+=imp*nx;a.vy-=imp*ny;b.vy+=imp*ny}}}}}}
+  function checkGameOver(){if(now-lastDropAt<1700)return;for(const f of fruits){if(f.merging||now-f.bornAt<1800)continue;const isSettled=Math.abs(f.vx)<1.1&&Math.abs(f.vy)<1.1;if(f.y-f.radius<=gameOverLineY&&isSettled){if(!f.overLineSince)f.overLineSince=now;if(now-f.overLineSince>1600){gameOver=true;overlay.style.display="flex";return}}else f.overLineSince=null}}
+  function update(){if(gameOver)return;resolvePhysics();checkGameOver()}
+  function dropActiveFruit(){if(gameOver||!activeFruit||!activeFruit.isStatic)return;activeFruit.isStatic=false;activeFruit.vx=(pointerX-activeFruit.x)*.05+(Math.random()-.5)*.4;activeFruit.vy=2.2;activeFruit.angularVel=(Math.random()-.5)*.12;activeFruit.droppedAt=now;activeFruit.bornAt=now;activeFruit.overLineSince=null;fruits.push(activeFruit);activeFruit=null;lastDropAt=now;setTimeout(()=>{if(!gameOver)spawnActiveFruit()},260)}
+  function resetGame(){fruits=[];activeFruit=null;currentScore=0;dropCounter=0;gameOver=false;pointerX=width/2;lastDropAt=0;overlay.style.display="none";updateScoreUI();nextFruitType=Math.floor(Math.random()*3);spawnActiveFruit()}
+  function handlePointerMove(clientX){if(gameOver||!activeFruit||!activeFruit.isStatic)return;const rect=canvas.getBoundingClientRect(),scaleX=canvas.width/rect.width;let x=(clientX-rect.left)*scaleX;x=Math.min(Math.max(x,leftWallX+activeFruit.radius),rightWallX-activeFruit.radius);activeFruit.x=x;pointerX=x}
+  function getX(e){return e.touches?e.touches[0].clientX:e.clientX}
+  canvas.addEventListener("touchstart",e=>{e.preventDefault();handlePointerMove(getX(e))},{passive:false});
+  canvas.addEventListener("touchmove",e=>{e.preventDefault();handlePointerMove(getX(e))},{passive:false});
+  canvas.addEventListener("touchend",e=>{e.preventDefault();dropActiveFruit()},{passive:false});
+  canvas.addEventListener("mousedown",e=>{handlePointerMove(getX(e))});
+  canvas.addEventListener("mousemove",e=>{if(e.buttons)handlePointerMove(getX(e))});
+  window.addEventListener("mouseup",()=>dropActiveFruit());
+  document.getElementById("resetGameBtn").onclick=resetGame;document.getElementById("restartOverlayBtn").onclick=resetGame;
+  function loop(t){now=t||0;update();drawScene();requestAnimationFrame(loop)}
+  resetGame();loop();
+})();
+</script>
+<script>
+if("serviceWorker" in navigator && location.protocol.startsWith("http")){
+  navigator.serviceWorker.register("./sw.js").catch(()=>{});
+}
+</script>
+</body>
+</html>
